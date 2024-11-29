@@ -51,27 +51,35 @@ inventario = cargar_inventario()
 
 if faltantes_file:
     with st.spinner("Procesando archivos..."):
-        alternativas = procesar_faltantes(faltantes_file, inventario)
-    
-    st.success("¡Alternativas generadas exitosamente!")
-    st.write("Aquí tienes las alternativas generadas:")
-    st.dataframe(alternativas)
-    
-    # Botón para descargar el archivo de alternativas
-    st.header("Descargar Alternativas")
-    @st.cache_data
-    def convertir_a_excel(df):
-        import io
-        output = io.BytesIO()
-        with pd.ExcelWriter(output, engine="openpyxl") as writer:
-            df.to_excel(writer, index=False, sheet_name="Alternativas")
-        processed_data = output.getvalue()
-        return processed_data
+        # Leer el archivo de faltantes cargado
+        faltantes_df = pd.read_excel(faltantes_file)
 
-    alternativas_excel = convertir_a_excel(alternativas)
-    st.download_button(
-        label="Descargar archivo de alternativas",
-        data=alternativas_excel,
-        file_name="alternativas_generadas.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    )
+        # Si el archivo de faltantes es cargado correctamente, procesarlo
+        if inventario is not None:
+            alternativas = procesar_faltantes(faltantes_df, inventario, columnas_adicionales=['nombre', 'laboratorio', 'presentacion'], bodega_seleccionada=None)
+        
+            st.success("¡Alternativas generadas exitosamente!")
+            st.write("Aquí tienes las alternativas generadas:")
+            st.dataframe(alternativas)
+            
+            # Botón para descargar el archivo de alternativas
+            st.header("Descargar Alternativas")
+            
+            @st.cache_data
+            def convertir_a_excel(df):
+                import io
+                output = io.BytesIO()
+                with pd.ExcelWriter(output, engine="openpyxl") as writer:
+                    df.to_excel(writer, index=False, sheet_name="Alternativas")
+                processed_data = output.getvalue()
+                return processed_data
+
+            alternativas_excel = convertir_a_excel(alternativas)
+            st.download_button(
+                label="Descargar archivo de alternativas",
+                data=alternativas_excel,
+                file_name="alternativas_generadas.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        else:
+            st.error("No se pudo cargar el inventario. Por favor, intente de nuevo.")
