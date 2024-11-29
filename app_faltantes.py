@@ -12,8 +12,8 @@ def procesar_faltantes(faltantes_df, inventario_api_df, columnas_adicionales, bo
         raise ValueError(f"El archivo de faltantes debe contener las columnas: {', '.join(columnas_necesarias)}")
 
     # Filtrar las alternativas de inventario que coincidan con los códigos de producto (cur)
-    cur_faltantes = faltantes_df['cur'].unique()
-    alternativas_inventario_df = inventario_api_df[inventario_api_df['cur'].isin(cur_faltantes)]
+    cur_faltantes = faltantes_df['codart'].unique()
+    alternativas_inventario_df = inventario_api_df[inventario_api_df['codart'].isin(cur_faltantes)]
 
     # Filtrar por bodega si es necesario
     if bodega_seleccionada:
