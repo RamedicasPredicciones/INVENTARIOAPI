@@ -27,7 +27,7 @@ st.markdown(
 # Botones principales
 st.markdown(
     f"""
-    <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 10px; margin-top: 20px;">
+    <div style="display: flex; flex-direction: row; align-items: center; gap: 10px; margin-top: 20px;">
         <a href="{PLANTILLA_URL}" download>
             <button style="background-color: #FF5800; color: white; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer;">
                 Descargar plantilla de faltantes
@@ -40,6 +40,7 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
 
 # Subir archivos de faltantes
 st.header("Carga de Archivos")
