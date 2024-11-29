@@ -46,7 +46,7 @@ st.header("Carga de Archivos")
 faltantes_file = st.file_uploader("Sube el archivo de faltantes (.xlsx)", type=["xlsx"])
 
 # Cargar el inventario desde la API
-st.header("Cargando Inventario...")
+
 inventario = cargar_inventario()
 
 if faltantes_file:
