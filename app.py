@@ -1,34 +1,10 @@
 import streamlit as st
+from app_inventario import cargar_inventario
+from app_faltantes import procesar_faltantes
 import pandas as pd
 
 # URL de la plantilla para faltantes
 PLANTILLA_URL = "https://docs.google.com/spreadsheets/d/1CPMBfCiuXq2_l8KY68HgexD-kyNVJ2Ml/export?format=xlsx"
-
-# Función para procesar faltantes y buscar alternativas
-def procesar_faltantes(faltantes_file, inventario_file):
-    # Cargar los datos
-    faltantes = pd.read_excel(faltantes_file)
-    inventario = pd.read_excel(inventario_file)
-    
-    # Calcular columna 'faltante'
-    faltantes["faltante"] = faltantes["cant_pedido"] - faltantes["cant_despacho"]
-    
-    # Buscar alternativas basadas en 'cum'
-    alternativas = pd.merge(
-        faltantes, 
-        inventario, 
-        on="cum", 
-        how="left", 
-        suffixes=("_faltante", "_inventario")
-    )
-    
-    # Seleccionar columnas relevantes
-    columnas_relevantes = [
-        "codart", "cum", "faltante", "nombre", "laboratorio", "presentacion", "embalaje"
-    ]
-    alternativas = alternativas[columnas_relevantes]
-    
-    return alternativas
 
 # Configuración inicial de Streamlit
 st.set_page_config(page_title="RAMEDICAS - Generador de Alternativas", layout="wide")
@@ -48,7 +24,7 @@ st.markdown(
     """, unsafe_allow_html=True
 )
 
-# Botones de inicio
+# Botones principales
 st.markdown(
     f"""
     <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 10px; margin-top: 20px;">
@@ -65,15 +41,17 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Subir archivos de faltantes e inventario
+# Subir archivos de faltantes
 st.header("Carga de Archivos")
 faltantes_file = st.file_uploader("Sube el archivo de faltantes (.xlsx)", type=["xlsx"])
-inventario_file = st.file_uploader("Sube el archivo de inventario (.xlsx)", type=["xlsx"])
 
-# Procesar y mostrar resultados
-if faltantes_file and inventario_file:
+# Cargar el inventario desde la API
+st.header("Cargando Inventario...")
+inventario = cargar_inventario()
+
+if faltantes_file:
     with st.spinner("Procesando archivos..."):
-        alternativas = procesar_faltantes(faltantes_file, inventario_file)
+        alternativas = procesar_faltantes(faltantes_file, inventario)
     
     st.success("¡Alternativas generadas exitosamente!")
     st.write("Aquí tienes las alternativas generadas:")
@@ -97,4 +75,3 @@ if faltantes_file and inventario_file:
         file_name="alternativas_generadas.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
-
