@@ -41,14 +41,14 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Subir archivo de faltantes
+
+# Subir archivos de faltantes
 st.header("Carga de Archivos")
 faltantes_file = st.file_uploader("Sube el archivo de faltantes (.xlsx)", type=["xlsx"])
 
 # Cargar el inventario desde la API
-st.header("Cargando Inventario...")
-with st.spinner("Obteniendo datos de inventario desde la API..."):
-    inventario = cargar_inventario()
+
+inventario = cargar_inventario()
 
 if faltantes_file:
     with st.spinner("Procesando archivos..."):
@@ -57,13 +57,8 @@ if faltantes_file:
 
         # Si el archivo de faltantes es cargado correctamente, procesarlo
         if inventario is not None:
-            alternativas = procesar_faltantes(
-                faltantes_df,
-                inventario,
-                columnas_adicionales=['nombre', 'laboratorio', 'presentacion'],
-                bodega_seleccionada=None,
-            )
-            
+            alternativas = procesar_faltantes(faltantes_df, inventario, columnas_adicionales=['nombre', 'laboratorio', 'presentacion'], bodega_seleccionada=None)
+        
             st.success("¡Alternativas generadas exitosamente!")
             st.write("Aquí tienes las alternativas generadas:")
             st.dataframe(alternativas)
@@ -89,6 +84,3 @@ if faltantes_file:
             )
         else:
             st.error("No se pudo cargar el inventario. Por favor, intente de nuevo.")
-else:
-    st.info("Por favor, sube un archivo de faltantes para comenzar.")
-
