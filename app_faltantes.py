@@ -1,19 +1,20 @@
+
 import math
 import pandas as pd
 
-def procesar_faltantes(faltantes_df, inventario_api_df, columnas_adicionales, bodega_seleccionada):
+def procesar_faltantes(faltantes_df, inventario_df, columnas_adicionales, bodega_seleccionada):
     # Normalizar las columnas para evitar discrepancias en mayúsculas/minúsculas
     faltantes_df.columns = faltantes_df.columns.str.lower().str.strip()
-    inventario_api_df.columns = inventario_api_df.columns.str.lower().str.strip()
+    inventario_df.columns = inventario_df.columns.str.lower().str.strip()
 
     # Verificar que el archivo de faltantes tenga las columnas necesarias
     columnas_necesarias = {'cur', 'codart', 'faltante', 'embalaje'}
     if not columnas_necesarias.issubset(faltantes_df.columns):
         raise ValueError(f"El archivo de faltantes debe contener las columnas: {', '.join(columnas_necesarias)}")
 
-    # Filtrar las alternativas de inventario que coincidan con los códigos de producto (cur)
-    cur_faltantes = faltantes_df['codart'].unique()
-    alternativas_inventario_df = inventario_api_df[inventario_api_df['codart'].isin(cur_faltantes)]
+    # Filtrar las alternativas de inventario que coincidan con los códigos de producto (codart)
+    codart_faltantes = faltantes_df['codart'].unique()
+    alternativas_inventario_df = inventario_df[inventario_df['codart'].isin(codart_faltantes)]
 
     # Filtrar por bodega si es necesario
     if bodega_seleccionada:
@@ -87,3 +88,4 @@ def procesar_faltantes(faltantes_df, inventario_api_df, columnas_adicionales, bo
     resultado_final_df = resultado_final_df[columnas_presentes]
 
     return resultado_final_df
+
