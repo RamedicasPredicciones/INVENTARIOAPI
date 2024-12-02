@@ -33,9 +33,6 @@ st.markdown(
                 Descargar plantilla de faltantes
             </button>
         </a>
-        <button onclick="window.location.reload()" style="background-color: #3A86FF; color: white; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer;">
-            Actualizar inventario
-        </button>
     </div>
     """,
     unsafe_allow_html=True
@@ -101,4 +98,3 @@ if faltantes_file:
         )
 else:
     st.warning("Por favor, sube un archivo de faltantes para procesar.")
-
