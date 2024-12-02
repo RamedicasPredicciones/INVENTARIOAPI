@@ -1,47 +1,97 @@
-import requests
+import streamlit as st
+from app_inventario import cargar_inventario_y_completar
+from app_faltantes import procesar_faltantes
 import pandas as pd
 
-def cargar_inventario_y_completar():
-    # URL de la API para obtener los productos
-    url_inventario = "https://apkit.ramedicas.com/api/items/ws-batchsunits?token=3f8857af327d7f1adb005b81a12743bc17fef5c48f228103198100d4b032f556"
-    url_maestro_moleculas = "https://docs.google.com/spreadsheets/d/19myWtMrvsor2P_XHiifPgn8YKdTWE39O/export?format=xlsx"
-    
-    try:
-        # Hacer la solicitud GET para obtener los datos de la API
-        response = requests.get(url_inventario, verify=False)
-        if response.status_code == 200:
-            # Convertir la respuesta JSON a un DataFrame
-            data_inventario = response.json()
-            inventario_df = pd.DataFrame(data_inventario)
+# URL de la plantilla para faltantes
+PLANTILLA_URL = "https://docs.google.com/spreadsheets/d/1CPMBfCiuXq2_l8KY68HgexD-kyNVJ2Ml/export?format=xlsx"
 
-            # Normalizar las columnas para evitar discrepancias en mayúsculas/minúsculas
-            inventario_df.columns = inventario_df.columns.str.lower().str.strip()
+# Configuración inicial de Streamlit
+st.set_page_config(page_title="RAMEDICAS - Generador de Alternativas", layout="wide")
 
-            # Renombrar codArt a codart para que coincida con el maestro
-            if 'codart' not in inventario_df.columns and 'codart' in inventario_df.columns.str.lower():
-                inventario_df.rename(columns={'codArt': 'codart'}, inplace=True)
+# Título e introducción
+st.markdown(
+    """
+    <h1 style="text-align: center; color: #FF5800; font-family: Arial, sans-serif;">
+        RAMEDICAS S.A.S.
+    </h1>
+    <h3 style="text-align: center; font-family: Arial, sans-serif; color: #3A86FF;">
+        Generador de Alternativas para Faltantes
+    </h3>
+    <p style="text-align: center; font-family: Arial, sans-serif; color: #6B6B6B;">
+        Esta herramienta te permite buscar el código alternativa para cada faltante de los pedidos en Ramédicas con su respectivo inventario actual.
+    </p>
+    """, unsafe_allow_html=True
+)
 
-            # Descargar y cargar el archivo maestro de moléculas
-            response_maestro = requests.get(url_maestro_moleculas, verify=False)
-            if response_maestro.status_code == 200:
-                maestro_moleculas = pd.read_excel(response_maestro.content)
-                maestro_moleculas.columns = maestro_moleculas.columns.str.lower().str.strip()
+# Botones principales
+st.markdown(
+    f"""
+    <div style="display: flex; flex-direction: row; align-items: center; gap: 10px; margin-top: 20px;">
+        <a href="{PLANTILLA_URL}" download>
+            <button style="background-color: #FF5800; color: white; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer;">
+                Descargar plantilla de faltantes
+            </button>
+        </a>
+        <button onclick="window.location.reload()" style="background-color: #3A86FF; color: white; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer;">
+            Actualizar inventario
+        </button>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
-                # Realizar el cruce para agregar las columnas 'cur' y 'embalaje'
-                inventario_df = inventario_df.merge(
-                    maestro_moleculas[['codart', 'cur', 'embalaje']],  # Seleccionar columnas relevantes del maestro
-                    on='codart',  # 'codart' ya está en minúsculas tras normalizar
-                    how='left'  # Para conservar todos los datos del inventario, aunque no haya coincidencia
-                )
+# Subir archivos de faltantes
+st.header("Carga de Archivos")
+faltantes_file = st.file_uploader("Sube el archivo de faltantes (.xlsx)", type=["xlsx"])
 
-                return inventario_df
-            else:
-                print(f"Error al obtener el archivo maestro de moléculas: {response_maestro.status_code}")
-                return None
-        else:
-            print(f"Error al obtener datos de la API: {response.status_code}")
-            return None
-    except requests.exceptions.RequestException as e:
-        print(f"Error en la conexión con la API: {e}")
-        return None
+# Cargar el inventario desde la API
+st.subheader("Cargando inventario...")
+with st.spinner("Cargando inventario desde la API y maestro..."):
+    inventario = cargar_inventario_y_completar()
 
+if inventario is not None:
+    st.success("Inventario cargado correctamente.")
+else:
+    st.error("Error al cargar el inventario. Intente nuevamente.")
+    st.stop()
+
+# Procesar faltantes si el usuario sube un archivo
+if faltantes_file:
+    with st.spinner("Procesando faltantes..."):
+        # Leer el archivo de faltantes cargado
+        faltantes_df = pd.read_excel(faltantes_file)
+
+        # Si el archivo de faltantes es cargado correctamente, procesarlo
+        alternativas = procesar_faltantes(
+            faltantes_df, 
+            inventario, 
+            columnas_adicionales=['nombre', 'laboratorio', 'presentacion'], 
+            bodega_seleccionada=None
+        )
+        
+        st.success("¡Alternativas generadas exitosamente!")
+        st.write("Aquí tienes las alternativas generadas:")
+        st.dataframe(alternativas)
+        
+        # Botón para descargar el archivo de alternativas
+        st.header("Descargar Alternativas")
+        
+        @st.cache_data
+        def convertir_a_excel(df):
+            import io
+            output = io.BytesIO()
+            with pd.ExcelWriter(output, engine="openpyxl") as writer:
+                df.to_excel(writer, index=False, sheet_name="Alternativas")
+            processed_data = output.getvalue()
+            return processed_data
+
+        alternativas_excel = convertir_a_excel(alternativas)
+        st.download_button(
+            label="Descargar archivo de alternativas",
+            data=alternativas_excel,
+            file_name="alternativas_generadas.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+else:
+    st.warning("Por favor, sube un archivo de faltantes para procesar.")
