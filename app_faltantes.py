@@ -22,12 +22,12 @@ def procesar_faltantes(faltantes_df, inventario_df, columnas_adicionales, bodega
     # Filtrar alternativas con existencias mayores a 0
     alternativas_disponibles_df = alternativas_inventario_df[alternativas_inventario_df['unidadespresentacionlote'] > 0]
 
-    # Asegurarse de que la columna 'opcion_alternativa' sea numérica
+    # Asegurarse de que la columna 'opcion_alternativa' sea numérica (esto previene errores de comparación)
     alternativas_disponibles_df['opcion_alternativa'] = pd.to_numeric(
         alternativas_disponibles_df['opcion_alternativa'], errors='coerce'
     )
 
-    # Filtrar solo aquellos registros donde 'opcion_alternativa' sea mayor que 0
+    # Filtrar alternativas donde 'opcion_alternativa' sea mayor a 0
     alternativas_disponibles_df = alternativas_disponibles_df[alternativas_disponibles_df['opcion_alternativa'] > 0]
 
     # Renombrar las columnas para mayor claridad
