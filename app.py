@@ -56,6 +56,12 @@ else:
     st.error("Error al cargar el inventario. Intente nuevamente.")
     st.stop()
 
+# Filtrar bodegas disponibles
+bodegas_disponibles = inventario['bodega'].unique().tolist()
+
+# Filtro para seleccionar bodegas
+bodega_seleccionada = st.multiselect("Selecciona la bodega", options=bodegas_disponibles, default=[])
+
 # Procesar faltantes si el usuario sube un archivo
 if faltantes_file:
     with st.spinner("Procesando faltantes..."):
@@ -67,7 +73,7 @@ if faltantes_file:
             faltantes_df, 
             inventario, 
             columnas_adicionales=['nombre', 'laboratorio', 'presentacion'], 
-            bodega_seleccionada=None
+            bodega_seleccionada=bodega_seleccionada
         )
         
         st.success("¡Alternativas generadas exitosamente!")
@@ -95,3 +101,4 @@ if faltantes_file:
         )
 else:
     st.warning("Por favor, sube un archivo de faltantes para procesar.")
+
