@@ -46,52 +46,39 @@ st.header("Carga de Archivos")
 faltantes_file = st.file_uploader("Sube el archivo de faltantes (.xlsx)", type=["xlsx"])
 
 # Cargar el inventario desde la API
-st.subheader("Cargando inventario...")
-with st.spinner("Cargando inventario desde la API y maestro..."):
-    inventario = cargar_inventario_y_completar()
+st.subheader("Cargando Inventario")
+inventario = cargar_inventario_y_completar()
 
 if inventario is not None:
     st.success("Inventario cargado correctamente.")
 else:
-    st.error("Error al cargar el inventario. Intente nuevamente.")
+    st.error("No se pudo cargar el inventario. Revisa la conexión.")
     st.stop()
 
-# Procesar faltantes si el usuario sube un archivo
-if faltantes_file:
-    with st.spinner("Procesando faltantes..."):
-        # Leer el archivo de faltantes cargado
-        faltantes_df = pd.read_excel(faltantes_file)
+# Subir archivo de faltantes
+st.subheader("Subir archivo de faltantes")
+faltantes_file = st.file_uploader("Carga tu archivo de faltantes (formato .xlsx)", type=["xlsx"])
 
-        # Si el archivo de faltantes es cargado correctamente, procesarlo
-        alternativas = procesar_faltantes(
-            faltantes_df, 
-            inventario, 
-            columnas_adicionales=['nombre', 'laboratorio', 'presentacion'], 
-            bodega_seleccionada=None
-        )
-        
-        st.success("¡Alternativas generadas exitosamente!")
-        st.write("Aquí tienes las alternativas generadas:")
-        st.dataframe(alternativas)
-        
-        # Botón para descargar el archivo de alternativas
-        st.header("Descargar Alternativas")
-        
-        @st.cache_data
-        def convertir_a_excel(df):
-            import io
-            output = io.BytesIO()
-            with pd.ExcelWriter(output, engine="openpyxl") as writer:
-                df.to_excel(writer, index=False, sheet_name="Alternativas")
-            processed_data = output.getvalue()
-            return processed_data
+if faltantes_file is not None:
+    faltantes_df = pd.read_excel(faltantes_file)
+    alternativas = procesar_faltantes(faltantes_df, inventario, columnas_adicionales=['nombre', 'laboratorio'], bodega_seleccionada=None)
+    st.success("¡Procesamiento completado!")
+    st.dataframe(alternativas)
 
-        alternativas_excel = convertir_a_excel(alternativas)
-        st.download_button(
-            label="Descargar archivo de alternativas",
-            data=alternativas_excel,
-            file_name="alternativas_generadas.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        )
-else:
-    st.warning("Por favor, sube un archivo de faltantes para procesar.")
+    # Botón para descargar
+    @st.cache_data
+    def convertir_a_excel(df):
+        import io
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False)
+        return output.getvalue()
+
+    excel_data = convertir_a_excel(alternativas)
+    st.download_button(
+        label="Descargar Alternativas",
+        data=excel_data,
+        file_name="alternativas.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
