@@ -1,4 +1,3 @@
-
 import math
 import pandas as pd
 
@@ -88,4 +87,3 @@ def procesar_faltantes(faltantes_df, inventario_df, columnas_adicionales, bodega
     resultado_final_df = resultado_final_df[columnas_presentes]
 
     return resultado_final_df
-
