@@ -1,54 +1,61 @@
+import math
 import pandas as pd
-import streamlit as st
 
-# Cargar los archivos de faltantes e inventario (asegúrate de tener los archivos correctos)
-archivo_faltantes = 'faltantes.xlsx'  # Nombre del archivo de faltantes
-archivo_inventario = 'inventario.xlsx'  # Nombre del archivo de inventario
+def procesar_faltantes(faltantes_df, inventario_df, columnas_adicionales, bodega_seleccionada):
+    # Normalizar las columnas para evitar discrepancias en mayúsculas/minúsculas
+    faltantes_df.columns = faltantes_df.columns.str.lower().str.strip()
+    inventario_df.columns = inventario_df.columns.str.lower().str.strip()
 
-# Lee los archivos de Excel
-faltantes_df = pd.read_excel(archivo_faltantes)
-inventario_df = pd.read_excel(archivo_inventario)
+    # Verificar que el archivo de faltantes tenga las columnas necesarias
+    columnas_necesarias = {'cur', 'codart', 'faltante', 'embalaje'}
+    if not columnas_necesarias.issubset(faltantes_df.columns):
+        raise ValueError(f"El archivo de faltantes debe contener las columnas: {', '.join(columnas_necesarias)}")
 
-# Muestra el título de la aplicación
-st.title("Generador de Alternativas de Inventario")
+    # Filtrar las alternativas de inventario que coincidan con los códigos de producto (codart)
+    codart_faltantes = faltantes_df['codart'].unique()
+    alternativas_inventario_df = inventario_df[inventario_df['codart'].isin(codart_faltantes)]
 
-# Selección de bodegas (permitir seleccionar varias bodegas)
-bodegas = inventario_df['bodega'].unique()  # Obtener las bodegas disponibles en el inventario
-bodegas_seleccionadas = st.multiselect(
-    "Selecciona las bodegas", 
-    options=bodegas, 
-    default=bodegas.tolist()  # Por defecto seleccionamos todas las bodegas
-)
+    # Filtrar por bodega si es necesario
+    if bodega_seleccionada:
+        alternativas_inventario_df = alternativas_inventario_df[alternativas_inventario_df['bodega'].isin(bodega_seleccionada)]
 
-# Si no se seleccionan bodegas, muestra un mensaje de error
-if not bodegas_seleccionadas:
-    st.warning("Por favor selecciona al menos una bodega.")
-else:
-    # Filtrar inventario según las bodegas seleccionadas
-    inventario_filtrado = inventario_df[inventario_df['bodega'].isin(bodegas_seleccionadas)]
-    
-    # Generar lista de alternativas
-    alternativas_disponibles = []
+    # Filtrar alternativas con existencias mayores a 0
+    alternativas_disponibles_df = alternativas_inventario_df[alternativas_inventario_df['unidadespresentacionlote'] > 0]
 
-    # Iteramos sobre los faltantes
-    for index, row in faltantes_df.iterrows():
-        cur_faltante = row['cur']
-        cantidad_faltante = row['faltante']
+    # Renombrar las columnas para mayor claridad
+    alternativas_disponibles_df.rename(columns={
+        'codart': 'codart_alternativa',
+        'opcion': 'opcion_alternativa',
+        'embalaje': 'embalaje_alternativa',
+        'unidadespresentacionlote': 'existencias_codart_alternativa'
+    }, inplace=True)
 
-        # Filtrar el inventario por código de artículo faltante y las bodegas seleccionadas
-        alternativas = inventario_filtrado[inventario_filtrado['codart'] == cur_faltante]
+    # Unir el DataFrame de faltantes con las alternativas disponibles
+    alternativas_disponibles_df = pd.merge(
+        faltantes_df[['cur', 'codart', 'faltante', 'embalaje']],
+        alternativas_disponibles_df,
+        on='cur',
+        how='inner'
+    )
 
-        # Verifica si hay alternativas disponibles para ese artículo faltante
-        if not alternativas.empty:
-            # Aquí agregas más lógica si quieres personalizar cómo seleccionar alternativas
-            alternativas['numlote'] = alternativas['numlote'].astype(str)  # Asegúrate de que los números de lote estén en el formato correcto
-            alternativas_disponibles.append(alternativas)
+    # Redondear las columnas 'existencias_codart_alternativa' a números enteros
+    alternativas_disponibles_df['existencias_codart_alternativa'] = alternativas_disponibles_df['existencias_codart_alternativa'].apply(lambda x: math.ceil(x) if pd.notnull(x) else x)
 
-    # Mostrar las alternativas generadas
-    if alternativas_disponibles:
-        alternativas_finales = pd.concat(alternativas_disponibles, ignore_index=True)
-        st.success("¡Alternativas generadas exitosamente!")
-        st.dataframe(alternativas_finales)  # Mostrar las alternativas en formato tabla
-    else:
-        st.warning("No se encontraron alternativas para los artículos faltantes.")
+    # Agregar la columna de cantidad necesaria ajustada por el embalaje
+    alternativas_disponibles_df['cantidad_necesaria'] = alternativas_disponibles_df.apply(
+        lambda row: math.ceil(row['faltante'] * row['embalaje'] / row['embalaje_alternativa'])
+        if pd.notnull(row['embalaje']) and pd.notnull(row['embalaje_alternativa']) and row['embalaje_alternativa'] > 0
+        else None,
+        axis=1
+    )
 
+    # Filtrar alternativas con cantidad necesaria mayor que 0
+    alternativas_disponibles_df = alternativas_disponibles_df[alternativas_disponibles_df['cantidad_necesaria'] > 0]
+
+    # Agregar las columnas adicionales si es necesario
+    if columnas_adicionales:
+        for columna in columnas_adicionales:
+            if columna in inventario_df.columns:
+                alternativas_disponibles_df[columna] = inventario_df[columna]
+
+    return alternativas_disponibles_df
