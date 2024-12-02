@@ -1,6 +1,8 @@
 import requests
 import pandas as pd
+import streamlit as st
 
+@st.cache_data
 def cargar_inventario_y_completar():
     # URL de la API para obtener los productos
     url_inventario = "https://apkit.ramedicas.com/api/items/ws-batchsunits?token=3f8857af327d7f1adb005b81a12743bc17fef5c48f228103198100d4b032f556"
