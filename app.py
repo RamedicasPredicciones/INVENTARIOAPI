@@ -9,6 +9,23 @@ PLANTILLA_URL = "https://docs.google.com/spreadsheets/d/1CPMBfCiuXq2_l8KY68HgexD
 # Configuración inicial de Streamlit
 st.set_page_config(page_title="RAMEDICAS - Generador de Alternativas", layout="wide")
 
+# URL del fondo
+FONDO_URL = "https://drive.google.com/uc?id=12bErHbEtceFn_JvSxwvnxKPUUH7YZykC"
+
+# CSS para el fondo
+st.markdown(
+    f"""
+    <style>
+        body {{
+            background-image: url("{FONDO_URL}");
+            background-size: cover;
+            background-position: center center;
+            background-attachment: fixed;
+        }}
+    </style>
+    """, unsafe_allow_html=True
+)
+
 # Título e introducción
 st.markdown(
     """
