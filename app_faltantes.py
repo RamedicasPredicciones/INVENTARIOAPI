@@ -1,8 +1,6 @@
-import streamlit as st
 import math
 import pandas as pd
 
-# Función para procesar los faltantes
 def procesar_faltantes(faltantes_df, inventario_df, columnas_adicionales, bodega_seleccionada):
     # Normalizar las columnas para evitar discrepancias en mayúsculas/minúsculas
     faltantes_df.columns = faltantes_df.columns.str.lower().str.strip()
@@ -58,32 +56,3 @@ def procesar_faltantes(faltantes_df, inventario_df, columnas_adicionales, bodega
                 alternativas_disponibles_df[columna] = inventario_df[columna]
 
     return alternativas_disponibles_df
-
-# Interfaz de Streamlit
-st.title('Generador de Alternativas para Faltantes')
-
-# Cargar el archivo de inventario y faltantes
-# Para este ejemplo, puedes cargar el inventario desde un archivo o URL, por ejemplo:
-inventario_df = pd.read_excel('ruta_a_inventario.xlsx')  # Cambia la ruta según corresponda
-faltantes_df = pd.read_excel('ruta_a_faltantes.xlsx')  # Cambia la ruta según corresponda
-
-# Filtrar bodegas disponibles
-bodegas_disponibles = inventario_df['bodega'].unique().tolist()
-bodega_seleccionada = st.multiselect("Seleccione la bodega", options=bodegas_disponibles, default=[])
-
-# Selección de columnas adicionales
-columnas_adicionales = st.multiselect(
-    "Selecciona columnas adicionales para incluir en el archivo final:",
-    options=["presentacionart", "numlote", "fechavencelote"],
-    default=[]
-)
-
-# Procesar los faltantes
-resultado_final_df = procesar_faltantes(faltantes_df, inventario_df, columnas_adicionales, bodega_seleccionada)
-
-# Mostrar el resultado
-if not resultado_final_df.empty:
-    st.write("Archivo procesado correctamente.")
-    st.dataframe(resultado_final_df)
-else:
-    st.write("No se encontraron alternativas para los faltantes seleccionados.")
