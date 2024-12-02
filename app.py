@@ -1,86 +1,89 @@
-import streamlit as st
-from app_inventario import cargar_inventario
-from app_faltantes import procesar_faltantes
+import math
 import pandas as pd
 
-# URL de la plantilla para faltantes
-PLANTILLA_URL = "https://docs.google.com/spreadsheets/d/1CPMBfCiuXq2_l8KY68HgexD-kyNVJ2Ml/export?format=xlsx"
+def procesar_faltantes(faltantes_df, inventario_df, columnas_adicionales, bodega_seleccionada):
+    # Normalizar las columnas para evitar discrepancias en mayúsculas/minúsculas
+    faltantes_df.columns = faltantes_df.columns.str.lower().str.strip()
+    inventario_df.columns = inventario_df.columns.str.lower().str.strip()
 
-# Configuración inicial de Streamlit
-st.set_page_config(page_title="RAMEDICAS - Generador de Alternativas", layout="wide")
+    # Verificar que el archivo de faltantes tenga las columnas necesarias
+    columnas_necesarias = {'cur', 'codart', 'faltante', 'embalaje'}
+    if not columnas_necesarias.issubset(faltantes_df.columns):
+        raise ValueError(f"El archivo de faltantes debe contener las columnas: {', '.join(columnas_necesarias)}")
 
-# Título e introducción
-st.markdown(
-    """
-    <h1 style="text-align: center; color: #FF5800; font-family: Arial, sans-serif;">
-        RAMEDICAS S.A.S.
-    </h1>
-    <h3 style="text-align: center; font-family: Arial, sans-serif; color: #3A86FF;">
-        Generador de Alternativas para Faltantes
-    </h3>
-    <p style="text-align: center; font-family: Arial, sans-serif; color: #6B6B6B;">
-        Esta herramienta te permite buscar el código alternativa para cada faltante de los pedidos en Ramédicas con su respectivo inventario actual.
-    </p>
-    """, unsafe_allow_html=True
-)
+    # Filtrar las alternativas de inventario que coincidan con los códigos de producto (codart)
+    codart_faltantes = faltantes_df['codart'].unique()
+    alternativas_inventario_df = inventario_df[inventario_df['codart'].isin(codart_faltantes)]
 
-# Botones principales
-st.markdown(
-    f"""
-    <div style="display: flex; flex-direction: row; align-items: center; gap: 10px; margin-top: 20px;">
-        <a href="{PLANTILLA_URL}" download>
-            <button style="background-color: #FF5800; color: white; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer;">
-                Descargar plantilla de faltantes
-            </button>
-        </a>
-        <button onclick="window.location.reload()" style="background-color: #3A86FF; color: white; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer;">
-            Actualizar inventario
-        </button>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+    # Filtrar por bodega si es necesario
+    if bodega_seleccionada:
+        alternativas_inventario_df = alternativas_inventario_df[alternativas_inventario_df['bodega'].isin(bodega_seleccionada)]
 
+    # Filtrar alternativas con existencias mayores a 0
+    alternativas_disponibles_df = alternativas_inventario_df[alternativas_inventario_df['unidadespresentacionlote'] > 0]
 
-# Subir archivos de faltantes
-st.header("Carga de Archivos")
-faltantes_file = st.file_uploader("Sube el archivo de faltantes (.xlsx)", type=["xlsx"])
+    # Renombrar las columnas para mayor claridad
+    alternativas_disponibles_df.rename(columns={
+        'codart': 'codart_alternativa',
+        'opcion': 'opcion_alternativa',
+        'embalaje': 'embalaje_alternativa',
+        'unidadespresentacionlote': 'existencias_codart_alternativa'
+    }, inplace=True)
 
-# Cargar el inventario desde la API
+    # Unir el DataFrame de faltantes con las alternativas disponibles
+    alternativas_disponibles_df = pd.merge(
+        faltantes_df[['cur', 'codart', 'faltante', 'embalaje']],
+        alternativas_disponibles_df,
+        on='cur',
+        how='inner'
+    )
 
-inventario = cargar_inventario()
+    # Filtrar los registros donde hay una opción alternativa disponible
+    alternativas_disponibles_df = alternativas_disponibles_df[alternativas_disponibles_df['opcion_alternativa'] > 0]
 
-if faltantes_file:
-    with st.spinner("Procesando archivos..."):
-        # Leer el archivo de faltantes cargado
-        faltantes_df = pd.read_excel(faltantes_file)
+    # Agregar la columna de cantidad necesaria ajustada por el embalaje
+    alternativas_disponibles_df['cantidad_necesaria'] = alternativas_disponibles_df.apply(
+        lambda row: math.ceil(row['faltante'] * row['embalaje'] / row['embalaje_alternativa'])
+        if pd.notnull(row['embalaje']) and pd.notnull(row['embalaje_alternativa']) and row['embalaje_alternativa'] > 0
+        else None,
+        axis=1
+    )
 
-        # Si el archivo de faltantes es cargado correctamente, procesarlo
-        if inventario is not None:
-            alternativas = procesar_faltantes(faltantes_df, inventario, columnas_adicionales=['nombre', 'laboratorio', 'presentacion'], bodega_seleccionada=None)
-        
-            st.success("¡Alternativas generadas exitosamente!")
-            st.write("Aquí tienes las alternativas generadas:")
-            st.dataframe(alternativas)
-            
-            # Botón para descargar el archivo de alternativas
-            st.header("Descargar Alternativas")
-            
-            @st.cache_data
-            def convertir_a_excel(df):
-                import io
-                output = io.BytesIO()
-                with pd.ExcelWriter(output, engine="openpyxl") as writer:
-                    df.to_excel(writer, index=False, sheet_name="Alternativas")
-                processed_data = output.getvalue()
-                return processed_data
+    # Ordenar las alternativas por código de producto y existencias de la alternativa
+    alternativas_disponibles_df.sort_values(by=['codart', 'existencias_codart_alternativa'], inplace=True)
 
-            alternativas_excel = convertir_a_excel(alternativas)
-            st.download_button(
-                label="Descargar archivo de alternativas",
-                data=alternativas_excel,
-                file_name="alternativas_generadas.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            )
-        else:
-            st.error("No se pudo cargar el inventario. Por favor, intente de nuevo.")
+    # Buscar la mejor alternativa para cada código de artículo faltante
+    mejores_alternativas = []
+    for codart_faltante, group in alternativas_disponibles_df.groupby('codart'):
+        faltante_cantidad = group['faltante'].iloc[0]
+
+        # Buscar en la bodega seleccionada la mejor opción
+        mejor_opcion_bodega = group[group['existencias_codart_alternativa'] >= faltante_cantidad]
+        mejor_opcion = mejor_opcion_bodega.head(1) if not mejor_opcion_bodega.empty else group.nlargest(1, 'existencias_codart_alternativa')
+
+        mejores_alternativas.append(mejor_opcion.iloc[0])
+
+    # Crear el DataFrame final con las mejores alternativas
+    resultado_final_df = pd.DataFrame(mejores_alternativas)
+
+    # Agregar las columnas de "suplido" (si el faltante fue cubierto) y "faltante_restante"
+    resultado_final_df['suplido'] = resultado_final_df.apply(
+        lambda row: 'SI' if row['existencias_codart_alternativa'] >= row['cantidad_necesaria'] else 'NO',
+        axis=1
+    )
+
+    # Calcular la cantidad restante de faltante, si no se suplió completamente
+    resultado_final_df['faltante_restante_alternativa'] = resultado_final_df.apply(
+        lambda row: row['cantidad_necesaria'] - row['existencias_codart_alternativa'] if row['suplido'] == 'NO' else 0,
+        axis=1
+    )
+
+    # Selección de las columnas finales a mostrar
+    columnas_finales = ['cur', 'codart', 'faltante', 'embalaje', 'codart_alternativa', 'opcion_alternativa',
+                        'embalaje_alternativa', 'cantidad_necesaria', 'existencias_codart_alternativa', 'bodega', 'suplido',
+                        'faltante_restante_alternativa']
+    columnas_finales.extend([col.lower() for col in columnas_adicionales])
+    columnas_presentes = [col for col in columnas_finales if col in resultado_final_df.columns]
+    resultado_final_df = resultado_final_df[columnas_presentes]
+
+    return resultado_final_df
