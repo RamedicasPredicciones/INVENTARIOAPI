@@ -38,12 +38,6 @@ def procesar_faltantes(faltantes_df, inventario_df, columnas_adicionales, bodega
         how='inner'
     )
 
-    # Asegurarse de que la columna 'opcion_alternativa' sea numérica
-    alternativas_disponibles_df['opcion_alternativa'] = pd.to_numeric(alternativas_disponibles_df['opcion_alternativa'], errors='coerce')
-
-    # Filtrar las alternativas que tienen una opción alternativa válida (opcion_alternativa > 0)
-    alternativas_disponibles_df = alternativas_disponibles_df[alternativas_disponibles_df['opcion_alternativa'] > 0]
-
     # Agregar la columna de cantidad necesaria ajustada por el embalaje
     alternativas_disponibles_df['cantidad_necesaria'] = alternativas_disponibles_df.apply(
         lambda row: math.ceil(row['faltante'] * row['embalaje'] / row['embalaje_alternativa'])
@@ -51,5 +45,14 @@ def procesar_faltantes(faltantes_df, inventario_df, columnas_adicionales, bodega
         else None,
         axis=1
     )
+
+    # Filtrar alternativas con cantidad necesaria mayor que 0
+    alternativas_disponibles_df = alternativas_disponibles_df[alternativas_disponibles_df['cantidad_necesaria'] > 0]
+
+    # Agregar las columnas adicionales si es necesario
+    if columnas_adicionales:
+        for columna in columnas_adicionales:
+            if columna in inventario_df.columns:
+                alternativas_disponibles_df[columna] = inventario_df[columna]
 
     return alternativas_disponibles_df
