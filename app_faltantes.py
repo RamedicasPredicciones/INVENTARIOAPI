@@ -52,6 +52,14 @@ def procesar_faltantes(faltantes_df, inventario_df, columnas_adicionales, bodega
     # Filtrar alternativas con cantidad necesaria mayor que 0
     alternativas_disponibles_df = alternativas_disponibles_df[alternativas_disponibles_df['cantidad_necesaria'] > 0]
 
+    # Seleccionar la mejor alternativa para cada faltante
+    alternativas_disponibles_df = (
+        alternativas_disponibles_df.sort_values(by=['existencias_codart_alternativa'], ascending=False)
+        .groupby(['cur', 'codart'])
+        .first()
+        .reset_index()
+    )
+
     # Agregar las columnas adicionales si es necesario
     if columnas_adicionales:
         for columna in columnas_adicionales:
