@@ -38,6 +38,9 @@ def procesar_faltantes(faltantes_df, inventario_df, columnas_adicionales, bodega
         how='inner'
     )
 
+    # Redondear las columnas 'existencias_codart_alternativa' a números enteros
+    alternativas_disponibles_df['existencias_codart_alternativa'] = alternativas_disponibles_df['existencias_codart_alternativa'].apply(lambda x: math.ceil(x) if pd.notnull(x) else x)
+
     # Agregar la columna de cantidad necesaria ajustada por el embalaje
     alternativas_disponibles_df['cantidad_necesaria'] = alternativas_disponibles_df.apply(
         lambda row: math.ceil(row['faltante'] * row['embalaje'] / row['embalaje_alternativa'])
