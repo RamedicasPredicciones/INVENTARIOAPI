@@ -3,6 +3,14 @@ from app_inventario import cargar_inventario_y_completar
 from app_faltantes import procesar_faltantes
 import pandas as pd
 
+# Configuración general de la página de Streamlit
+st.set_page_config(
+    page_title="Busqueda de Opciones Ramédicas",
+    page_icon="🔁",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
 # URL de la plantilla para faltantes
 PLANTILLA_URL = "https://docs.google.com/spreadsheets/d/1CPMBfCiuXq2_l8KY68HgexD-kyNVJ2Ml/export?format=xlsx"
 
