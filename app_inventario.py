@@ -2,7 +2,6 @@ import requests
 import pandas as pd
 import streamlit as st
 
-@st.cache_data
 def cargar_inventario_y_completar():
     # URL de la API para obtener los productos
     url_inventario = "https://apkit.ramedicas.com/api/items/ws-batchsunits?token=3f8857af327d7f1adb005b81a12743bc17fef5c48f228103198100d4b032f556"
@@ -19,10 +18,6 @@ def cargar_inventario_y_completar():
             # Normalizar las columnas para evitar discrepancias en mayúsculas/minúsculas
             inventario_df.columns = inventario_df.columns.str.lower().str.strip()
 
-            # Renombrar codArt a codart para que coincida con el maestro
-            if 'codart' not in inventario_df.columns and 'codart' in inventario_df.columns.str.lower():
-                inventario_df.rename(columns={'codArt': 'codart'}, inplace=True)
-
             # Descargar y cargar el archivo maestro de moléculas
             response_maestro = requests.get(url_maestro_moleculas, verify=False)
             if response_maestro.status_code == 200:
@@ -31,18 +26,18 @@ def cargar_inventario_y_completar():
 
                 # Realizar el cruce para agregar las columnas 'cur' y 'embalaje'
                 inventario_df = inventario_df.merge(
-                    maestro_moleculas[['codart', 'cur', 'embalaje']],  # Seleccionar columnas relevantes del maestro
-                    on='codart',  # 'codart' ya está en minúsculas tras normalizar
-                    how='left'  # Para conservar todos los datos del inventario, aunque no haya coincidencia
+                    maestro_moleculas[['codart', 'cur', 'embalaje']],
+                    on='codart',
+                    how='left'
                 )
-
                 return inventario_df
             else:
-                print(f"Error al obtener el archivo maestro de moléculas: {response_maestro.status_code}")
+                st.error(f"Error al obtener el archivo maestro de moléculas: {response_maestro.status_code}")
                 return None
         else:
-            print(f"Error al obtener datos de la API: {response.status_code}")
+            st.error(f"Error al obtener datos de la API: {response.status_code}")
             return None
     except requests.exceptions.RequestException as e:
-        print(f"Error en la conexión con la API: {e}")
+        st.error(f"Error en la conexión con la API: {e}")
         return None
+
