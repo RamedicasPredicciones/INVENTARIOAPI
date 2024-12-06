@@ -55,14 +55,22 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+# Botón para recargar inventario
+if st.button("Recargar Inventario"):
+    st.spinner("Recargando inventario...")
+    inventario = cargar_inventario_y_completar()
+    if inventario is not None:
+        st.success("Inventario recargado correctamente.")
+    else:
+        st.error("Error al recargar el inventario.")
+
 # Subir archivos de faltantes
 st.header("Carga de Archivos")
 faltantes_file = st.file_uploader("Sube el archivo de faltantes (.xlsx)", type=["xlsx"])
 
 # Cargar el inventario desde la API
 st.subheader("Cargando inventario...")
-with st.spinner("Cargando inventario desde la API y maestro..."):
-    inventario = cargar_inventario_y_completar()
+inventario = cargar_inventario_y_completar()
 
 if inventario is not None:
     st.success("Inventario cargado correctamente.")
