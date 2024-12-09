@@ -40,4 +40,3 @@ def cargar_inventario_y_completar():
     except requests.exceptions.RequestException as e:
         st.error(f"Error en la conexión con la API: {e}")
         return None
-
