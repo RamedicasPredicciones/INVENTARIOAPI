@@ -18,6 +18,11 @@ def cargar_inventario_y_completar():
             # Normalizar las columnas para evitar discrepancias en mayúsculas/minúsculas
             inventario_df.columns = inventario_df.columns.str.lower().str.strip()
 
+            # Asegurarse de que las columnas 'unidadeslote' y 'unidadespresentacionlote' sean enteros
+            for col in ['unidadeslote', 'unidadespresentacionlote']:
+                if col in inventario_df.columns:
+                    inventario_df[col] = pd.to_numeric(inventario_df[col], errors='coerce').fillna(0).round().astype(int)
+
             # Descargar y cargar el archivo maestro de moléculas
             response_maestro = requests.get(url_maestro_moleculas, verify=False)
             if response_maestro.status_code == 200:
