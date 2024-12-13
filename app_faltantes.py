@@ -67,6 +67,11 @@ def procesar_faltantes(faltantes_df, inventario_df, columnas_adicionales, bodega
         .reset_index()
     )
 
+    # Agregar una columna que indique cuánto porcentaje del faltante se puede suplir (formateado como texto)
+    alternativas_disponibles_df['estado_suplido'] = alternativas_disponibles_df['porcentaje_suplido'].apply(
+        lambda x: f"Se suple el {round(x * 100)}%"
+    )
+
     # Agregar las columnas adicionales si es necesario
     if columnas_adicionales:
         for columna in columnas_adicionales:
@@ -74,3 +79,4 @@ def procesar_faltantes(faltantes_df, inventario_df, columnas_adicionales, bodega
                 alternativas_disponibles_df[columna] = inventario_df[columna]
 
     return alternativas_disponibles_df
+
