@@ -49,12 +49,16 @@ def procesar_faltantes(faltantes_df, inventario_df, columnas_adicionales, bodega
         axis=1
     )
 
-    # Filtrar alternativas con cantidad necesaria mayor que 0
-    alternativas_disponibles_df = alternativas_disponibles_df[alternativas_disponibles_df['cantidad_necesaria'] > 0]
+    # Agregar columna de porcentaje suplido
+    alternativas_disponibles_df['porcentaje_suplido'] = alternativas_disponibles_df.apply(
+        lambda row: min(row['existencias_codart_alternativa'] / row['cantidad_necesaria'], 1.0)
+        if pd.notnull(row['cantidad_necesaria']) and row['cantidad_necesaria'] > 0 else 0,
+        axis=1
+    )
 
-    # Seleccionar la mejor alternativa para cada faltante
+    # Seleccionar la mejor alternativa por cada faltante
     alternativas_disponibles_df = (
-        alternativas_disponibles_df.sort_values(by=['existencias_codart_alternativa'], ascending=False)
+        alternativas_disponibles_df.sort_values(by=['porcentaje_suplido', 'existencias_codart_alternativa'], ascending=[False, False])
         .groupby(['cur', 'codart'])
         .first()
         .reset_index()
