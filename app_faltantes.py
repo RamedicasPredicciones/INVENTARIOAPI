@@ -56,6 +56,9 @@ def procesar_faltantes(faltantes_df, inventario_df, columnas_adicionales, bodega
         axis=1
     )
 
+    # Filtrar para mantener solo las alternativas que cubren al menos el 50% del faltante
+    alternativas_disponibles_df = alternativas_disponibles_df[alternativas_disponibles_df['porcentaje_suplido'] >= 0.5]
+
     # Seleccionar la mejor alternativa por cada faltante
     alternativas_disponibles_df = (
         alternativas_disponibles_df.sort_values(by=['porcentaje_suplido', 'existencias_codart_alternativa'], ascending=[False, False])
