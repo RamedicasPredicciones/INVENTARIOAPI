@@ -5,7 +5,6 @@ import streamlit as st
 def cargar_inventario_y_completar():
     # URL de la API para obtener los productos
     url_inventario = "https://apkit.ramedicas.com/api/items/ws-batchsunits?token=3f8857af327d7f1adb005b81a12743bc17fef5c48f228103198100d4b032f556"
-    url_maestro_moleculas = "https://docs.google.com/spreadsheets/d/19myWtMrvsor2P_XHiifPgn8YKdTWE39O/export?format=xlsx"
     
     try:
         # Hacer la solicitud GET para obtener los datos de la API
@@ -23,22 +22,7 @@ def cargar_inventario_y_completar():
                 if col in inventario_df.columns:
                     inventario_df[col] = pd.to_numeric(inventario_df[col], errors='coerce').fillna(0).round().astype(int)
 
-            # Descargar y cargar el archivo maestro de moléculas
-            response_maestro = requests.get(url_maestro_moleculas, verify=False)
-            if response_maestro.status_code == 200:
-                maestro_moleculas = pd.read_excel(response_maestro.content)
-                maestro_moleculas.columns = maestro_moleculas.columns.str.lower().str.strip()
-
-                # Realizar el cruce para agregar las columnas 'cur' y 'embalaje'
-                inventario_df = inventario_df.merge(
-                    maestro_moleculas[['codart', 'cur', 'embalaje']],
-                    on='codart',
-                    how='left'
-                )
-                return inventario_df
-            else:
-                st.error(f"Error al obtener el archivo maestro de moléculas: {response_maestro.status_code}")
-                return None
+            return inventario_df
         else:
             st.error(f"Error al obtener datos de la API: {response.status_code}")
             return None
