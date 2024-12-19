@@ -17,6 +17,10 @@ def cargar_inventario_y_completar():
             # Normalizar las columnas para evitar discrepancias en mayúsculas/minúsculas
             inventario_df.columns = inventario_df.columns.str.lower().str.strip()
 
+            # Filtrar solo las bodegas permitidas
+            bodegas_permitidas = ["A011", "C015", "C018", "D017"]
+            inventario_df = inventario_df[inventario_df['bodega'].isin(bodegas_permitidas)]
+
             # Asegurarse de que las columnas 'unidadeslote' y 'unidadespresentacionlote' sean enteros
             for col in ['unidadeslote', 'unidadespresentacionlote']:
                 if col in inventario_df.columns:
