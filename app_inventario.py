@@ -22,7 +22,7 @@ def cargar_inventario_y_completar():
                 inventario_df.rename(columns={'embalajeart': 'embalaje'}, inplace=True)
 
             # Filtrar solo las bodegas permitidas
-            bodegas_permitidas = ["A011", "C015", "C018", "C017"]
+            bodegas_permitidas = ["A011", "C018"]
             inventario_df = inventario_df[inventario_df['bodega'].isin(bodegas_permitidas)]
 
             # Asegurarse de que las columnas 'unidadeslote' y 'unidadespresentacionlote' sean enteros
