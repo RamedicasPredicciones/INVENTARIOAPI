@@ -153,3 +153,4 @@ if faltantes_file:
             )
 else:
     st.warning("Por favor, sube un archivo de faltantes para procesar.")
+
