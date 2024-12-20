@@ -92,9 +92,6 @@ opcion_seleccionada = st.multiselect("Selecciona la opcion", options=opciones_di
 # Tabla acumulativa de resultados
 resultados_acumulados = pd.DataFrame()
 
-# Mantener los faltantes no resueltos
-faltantes_no_resueltos = pd.DataFrame()
-
 def buscar_alternativas(faltantes_df, inventario, bodega_seleccionada, opcion_seleccionada):
     # Filtrar inventario por las opciones seleccionadas
     if opcion_seleccionada:
@@ -109,10 +106,7 @@ def buscar_alternativas(faltantes_df, inventario, bodega_seleccionada, opcion_se
 # Procesar faltantes si el usuario sube un archivo
 if faltantes_file:
     with st.spinner("Procesando faltantes..."):
-        if faltantes_no_resueltos.empty:
-            faltantes_df = pd.read_excel(faltantes_file)
-        else:
-            faltantes_df = faltantes_no_resueltos
+        faltantes_df = pd.read_excel(faltantes_file)
 
         alternativas = buscar_alternativas(
             faltantes_df,
@@ -127,17 +121,7 @@ if faltantes_file:
             st.success("¡Alternativas generadas exitosamente!")
             resultados_acumulados = pd.concat([resultados_acumulados, alternativas], ignore_index=True)
 
-            # Actualizar faltantes no resueltos
-            faltantes_resueltos = alternativas['codart'].unique()
-            faltantes_no_resueltos = faltantes_df[~faltantes_df['codart'].isin(faltantes_resueltos)]
-
             st.dataframe(resultados_acumulados)
-
-            if not faltantes_no_resueltos.empty:
-                st.info("Aún quedan faltantes sin alternativas. Selecciona otras opciones y busca nuevamente.")
-
-            if st.button("Seguir buscando opciones"):
-                st.info("Selecciona nuevas opciones y vuelve a procesar el archivo.")
 
         # Descargar resultados acumulados
         if not resultados_acumulados.empty:
