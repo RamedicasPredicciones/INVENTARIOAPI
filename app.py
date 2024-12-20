@@ -83,6 +83,9 @@ if 'opcionart' in inventario.columns:
 if 'opcion' in inventario.columns:
     inventario['opcion'] = pd.to_numeric(inventario['opcion'], errors='coerce').fillna(0)
 
+# Ordenar el inventario por "opcion" ascendente
+inventario = inventario.sort_values(by=['opcion'])
+
 opciones_disponibles = inventario[inventario['opcion'] >= 1]['opcion'].unique().tolist()
 opcion_seleccionada = st.multiselect("Selecciona la opcion", options=opciones_disponibles, default=[])
 
