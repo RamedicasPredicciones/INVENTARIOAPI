@@ -38,14 +38,17 @@ def procesar_faltantes(faltantes_df, inventario_df, columnas_adicionales, bodega
         how='inner'
     )
 
-    # Redondear las columnas 'existencias_codart_alternativa' a números enteros
-    alternativas_disponibles_df['existencias_codart_alternativa'] = alternativas_disponibles_df['existencias_codart_alternativa'].apply(lambda x: math.ceil(x) if pd.notnull(x) else x)
+    # Verificar y convertir las columnas relevantes a numéricas
+    columnas_a_verificar = ['faltante', 'embalaje', 'embalaje_alternativa']
+    for columna in columnas_a_verificar:
+        alternativas_disponibles_df[columna] = pd.to_numeric(
+            alternativas_disponibles_df[columna], errors='coerce'
+        ).fillna(0)
 
     # Agregar la columna de cantidad necesaria ajustada por el embalaje
     alternativas_disponibles_df['cantidad_necesaria'] = alternativas_disponibles_df.apply(
         lambda row: math.ceil(row['faltante'] * row['embalaje'] / row['embalaje_alternativa'])
-        if pd.notnull(row['embalaje']) and pd.notnull(row['embalaje_alternativa']) and row['embalaje_alternativa'] > 0
-        else None,
+        if row['embalaje_alternativa'] > 0 else None,
         axis=1
     )
 
@@ -79,4 +82,3 @@ def procesar_faltantes(faltantes_df, inventario_df, columnas_adicionales, bodega
                 alternativas_disponibles_df[columna] = inventario_df[columna]
 
     return alternativas_disponibles_df
-
