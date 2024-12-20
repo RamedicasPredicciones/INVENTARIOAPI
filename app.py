@@ -64,11 +64,11 @@ if st.button("Recargar Inventario"):
     else:
         st.error("Error al recargar el inventario.")
 
-# Subir archivo de faltantes
+# Subir archivos de faltantes
 st.header("Carga de Archivos")
 faltantes_file = st.file_uploader("Sube el archivo de faltantes (.xlsx)", type=["xlsx"])
 
-# Cargar inventario desde la API
+# Cargar el inventario desde la API
 st.subheader("Cargando inventario...")
 inventario = cargar_inventario_y_completar()
 
@@ -84,57 +84,43 @@ bodegas_disponibles = inventario['bodega'].unique().tolist()
 # Filtro para seleccionar bodegas
 bodega_seleccionada = st.multiselect("Selecciona la bodega", options=bodegas_disponibles, default=[])
 
-# Filtrar opciones disponibles
-inventario['opcion'] = pd.to_numeric(inventario['opcion'], errors='coerce').fillna(0).astype(int)
-opciones_disponibles = sorted(inventario[inventario['opcion'] >= 1]['opcion'].unique())
-opcion_seleccionada = st.selectbox("Selecciona una opción", options=opciones_disponibles)
-
-# Inicializar almacenamiento de resultados
-if "resultados" not in st.session_state:
-    st.session_state.resultados = pd.DataFrame()
-
-if faltantes_file and opcion_seleccionada:
-    with st.spinner(f"Procesando faltantes para opción {opcion_seleccionada}..."):
-        # Leer archivo de faltantes
+# Procesar faltantes si el usuario sube un archivo
+if faltantes_file:
+    with st.spinner("Procesando faltantes..."):
+        # Leer el archivo de faltantes cargado
         faltantes_df = pd.read_excel(faltantes_file)
 
-        # Procesar faltantes
-        nuevas_alternativas = procesar_faltantes(
+        # Si el archivo de faltantes es cargado correctamente, procesarlo
+        alternativas = procesar_faltantes(
             faltantes_df, 
-            inventario[inventario['opcion'] == opcion_seleccionada], 
+            inventario, 
             columnas_adicionales=['nombre', 'laboratorio', 'presentacion'], 
             bodega_seleccionada=bodega_seleccionada
         )
+        
+        st.success("¡Alternativas generadas exitosamente!")
+        st.write("Aquí tienes las alternativas generadas:")
+        st.dataframe(alternativas)
+        
+        # Botón para descargar el archivo de alternativas
+        st.header("Descargar Alternativas")
+        
+        @st.cache_data
+        def convertir_a_excel(df):
+            import io
+            output = io.BytesIO()
+            with pd.ExcelWriter(output, engine="openpyxl") as writer:
+                df.to_excel(writer, index=False, sheet_name="Alternativas")
+            processed_data = output.getvalue()
+            return processed_data
 
-        # Combinar nuevas alternativas con resultados previos
-        if not nuevas_alternativas.empty:
-            st.session_state.resultados = pd.concat([st.session_state.resultados, nuevas_alternativas]).drop_duplicates()
+        alternativas_excel = convertir_a_excel(alternativas)
+        st.download_button(
+            label="Descargar archivo de alternativas",
+            data=alternativas_excel,
+            file_name="alternativas_generadas.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+else:
+    st.warning("Por favor, sube un archivo de faltantes para procesar.")
 
-        # Mostrar resultados acumulados
-        st.write("Resultados acumulados:")
-        st.dataframe(st.session_state.resultados)
-
-        # Botón para seguir buscando
-        if st.button("Seguir buscando opciones"):
-            st.experimental_rerun()
-
-# Botón para descargar archivo final
-if not st.session_state.resultados.empty:
-    st.header("Descargar todas las alternativas")
-    
-    @st.cache_data
-    def convertir_a_excel(df):
-        import io
-        output = io.BytesIO()
-        with pd.ExcelWriter(output, engine="openpyxl") as writer:
-            df.to_excel(writer, index=False, sheet_name="Alternativas")
-        processed_data = output.getvalue()
-        return processed_data
-
-    alternativas_excel = convertir_a_excel(st.session_state.resultados)
-    st.download_button(
-        label="Descargar archivo de alternativas",
-        data=alternativas_excel,
-        file_name="todas_las_alternativas.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    )
