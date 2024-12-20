@@ -55,15 +55,6 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Botón para recargar inventario
-if st.button("Recargar Inventario"):
-    st.spinner("Recargando inventario...")
-    inventario = cargar_inventario_y_completar()
-    if inventario is not None:
-        st.success("Inventario recargado correctamente.")
-    else:
-        st.error("Error al recargar el inventario.")
-
 # Subir archivos de faltantes
 st.header("Carga de Archivos")
 faltantes_file = st.file_uploader("Sube el archivo de faltantes (.xlsx)", type=["xlsx"])
@@ -84,42 +75,62 @@ bodegas_disponibles = inventario['bodega'].unique().tolist()
 # Filtro para seleccionar bodegas
 bodega_seleccionada = st.multiselect("Selecciona la bodega", options=bodegas_disponibles, default=[])
 
+# Filtrar opciones disponibles
+if 'opcionart' in inventario.columns:
+    inventario.rename(columns={'opcionart': 'opcion'}, inplace=True)
+opciones_disponibles = inventario[inventario['opcion'] >= 1]['opcion'].unique().tolist()
+opcion_seleccionada = st.multiselect("Selecciona la opcion", options=opciones_disponibles, default=[])
+
+# Tabla acumulativa de resultados
+resultados_acumulados = pd.DataFrame()
+
+def buscar_alternativas(faltantes_df, inventario, bodega_seleccionada, opcion_seleccionada):
+    return procesar_faltantes(
+        faltantes_df, 
+        inventario, 
+        columnas_adicionales=['nombre', 'laboratorio', 'presentacion'], 
+        bodega_seleccionada=bodega_seleccionada
+    )
+
 # Procesar faltantes si el usuario sube un archivo
 if faltantes_file:
     with st.spinner("Procesando faltantes..."):
-        # Leer el archivo de faltantes cargado
         faltantes_df = pd.read_excel(faltantes_file)
 
-        # Si el archivo de faltantes es cargado correctamente, procesarlo
-        alternativas = procesar_faltantes(
-            faltantes_df, 
-            inventario, 
-            columnas_adicionales=['nombre', 'laboratorio', 'presentacion'], 
-            bodega_seleccionada=bodega_seleccionada
+        alternativas = buscar_alternativas(
+            faltantes_df,
+            inventario,
+            bodega_seleccionada,
+            opcion_seleccionada
         )
-        
-        st.success("¡Alternativas generadas exitosamente!")
-        st.write("Aquí tienes las alternativas generadas:")
-        st.dataframe(alternativas)
-        
-        # Botón para descargar el archivo de alternativas
-        st.header("Descargar Alternativas")
-        
-        @st.cache_data
-        def convertir_a_excel(df):
-            import io
-            output = io.BytesIO()
-            with pd.ExcelWriter(output, engine="openpyxl") as writer:
-                df.to_excel(writer, index=False, sheet_name="Alternativas")
-            processed_data = output.getvalue()
-            return processed_data
 
-        alternativas_excel = convertir_a_excel(alternativas)
-        st.download_button(
-            label="Descargar archivo de alternativas",
-            data=alternativas_excel,
-            file_name="alternativas_generadas.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        )
+        if alternativas.empty:
+            st.warning("No se encontraron alternativas. Por favor, selecciona otras opciones y vuelve a buscar.")
+        else:
+            st.success("¡Alternativas generadas exitosamente!")
+            resultados_acumulados = pd.concat([resultados_acumulados, alternativas], ignore_index=True)
+            st.dataframe(resultados_acumulados)
+
+            if st.button("Seguir buscando opciones"):
+                st.info("Selecciona nuevas opciones y vuelve a procesar el archivo.")
+
+        # Descargar resultados acumulados
+        if not resultados_acumulados.empty:
+            @st.cache_data
+            def convertir_a_excel(df):
+                import io
+                output = io.BytesIO()
+                with pd.ExcelWriter(output, engine="openpyxl") as writer:
+                    df.to_excel(writer, index=False, sheet_name="Alternativas")
+                return output.getvalue()
+
+            alternativas_excel = convertir_a_excel(resultados_acumulados)
+            st.download_button(
+                label="Descargar archivo de alternativas",
+                data=alternativas_excel,
+                file_name="alternativas_generadas.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
 else:
     st.warning("Por favor, sube un archivo de faltantes para procesar.")
+
