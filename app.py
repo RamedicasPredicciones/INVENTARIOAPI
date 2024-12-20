@@ -89,7 +89,13 @@ opcion_seleccionada = st.multiselect("Selecciona la opcion", options=opciones_di
 # Tabla acumulativa de resultados
 resultados_acumulados = pd.DataFrame()
 
+# Mantener los faltantes no resueltos
+faltantes_no_resueltos = pd.DataFrame()
+
 def buscar_alternativas(faltantes_df, inventario, bodega_seleccionada, opcion_seleccionada):
+    # Filtrar inventario por las opciones seleccionadas
+    if opcion_seleccionada:
+        inventario = inventario[inventario['opcion'].isin(opcion_seleccionada)]
     return procesar_faltantes(
         faltantes_df, 
         inventario, 
@@ -100,7 +106,10 @@ def buscar_alternativas(faltantes_df, inventario, bodega_seleccionada, opcion_se
 # Procesar faltantes si el usuario sube un archivo
 if faltantes_file:
     with st.spinner("Procesando faltantes..."):
-        faltantes_df = pd.read_excel(faltantes_file)
+        if faltantes_no_resueltos.empty:
+            faltantes_df = pd.read_excel(faltantes_file)
+        else:
+            faltantes_df = faltantes_no_resueltos
 
         alternativas = buscar_alternativas(
             faltantes_df,
@@ -110,11 +119,19 @@ if faltantes_file:
         )
 
         if alternativas.empty:
-            st.warning("No se encontraron alternativas. Por favor, selecciona otras opciones y vuelve a buscar.")
+            st.warning("No se encontraron alternativas para los faltantes actuales. Por favor, selecciona otras opciones y vuelve a buscar.")
         else:
             st.success("¡Alternativas generadas exitosamente!")
             resultados_acumulados = pd.concat([resultados_acumulados, alternativas], ignore_index=True)
+
+            # Actualizar faltantes no resueltos
+            faltantes_resueltos = alternativas['codart'].unique()
+            faltantes_no_resueltos = faltantes_df[~faltantes_df['codart'].isin(faltantes_resueltos)]
+
             st.dataframe(resultados_acumulados)
+
+            if not faltantes_no_resueltos.empty:
+                st.info("Aún quedan faltantes sin alternativas. Selecciona otras opciones y busca nuevamente.")
 
             if st.button("Seguir buscando opciones"):
                 st.info("Selecciona nuevas opciones y vuelve a procesar el archivo.")
