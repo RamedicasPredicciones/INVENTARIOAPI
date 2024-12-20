@@ -55,9 +55,6 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Variables globales
-resultado_acumulado = pd.DataFrame()
-
 # Botón para recargar inventario
 if st.button("Recargar Inventario"):
     st.spinner("Recargando inventario...")
@@ -87,61 +84,42 @@ bodegas_disponibles = inventario['bodega'].unique().tolist()
 # Filtro para seleccionar bodegas
 bodega_seleccionada = st.multiselect("Selecciona la bodega", options=bodegas_disponibles, default=[])
 
-# Filtro para seleccionar opciones mayores o iguales a 1
-inventario = inventario[inventario['opcion'] >= 1]
-opciones_disponibles = inventario['opcion'].unique().tolist()
-opcion_seleccionada = st.multiselect("Selecciona la opción", options=opciones_disponibles, default=[])
-
 # Procesar faltantes si el usuario sube un archivo
 if faltantes_file:
     with st.spinner("Procesando faltantes..."):
         # Leer el archivo de faltantes cargado
         faltantes_df = pd.read_excel(faltantes_file)
 
-        # Procesar alternativas iniciales
+        # Si el archivo de faltantes es cargado correctamente, procesarlo
         alternativas = procesar_faltantes(
             faltantes_df, 
             inventario, 
             columnas_adicionales=['nombre', 'laboratorio', 'presentacion'], 
-            bodega_seleccionada=bodega_seleccionada,
-            opcion_seleccionada=opcion_seleccionada
+            bodega_seleccionada=bodega_seleccionada
         )
+        
+        st.success("¡Alternativas generadas exitosamente!")
+        st.write("Aquí tienes las alternativas generadas:")
+        st.dataframe(alternativas)
+        
+        # Botón para descargar el archivo de alternativas
+        st.header("Descargar Alternativas")
+        
+        @st.cache_data
+        def convertir_a_excel(df):
+            import io
+            output = io.BytesIO()
+            with pd.ExcelWriter(output, engine="openpyxl") as writer:
+                df.to_excel(writer, index=False, sheet_name="Alternativas")
+            processed_data = output.getvalue()
+            return processed_data
 
-        global resultado_acumulado
-
-        if alternativas.empty:
-            st.warning("No se encontraron alternativas en esta búsqueda. Intenta con otras opciones o bodegas.")
-        else:
-            st.success("¡Alternativas generadas exitosamente!")
-            st.write("Aquí tienes las alternativas generadas:")
-            st.dataframe(alternativas)
-
-            # Actualizar el resultado acumulado
-            resultado_acumulado = pd.concat([resultado_acumulado, alternativas], ignore_index=True)
-
-            # Botón para seguir buscando opciones
-            if st.button("Seguir buscando opciones"):
-                st.info("Realiza otra selección para continuar.")
-
-# Descargar el resultado acumulado
-if not resultado_acumulado.empty:
-    st.header("Descargar Resultados Consolidados")
-
-    @st.cache_data
-    def convertir_a_excel(df):
-        import io
-        output = io.BytesIO()
-        with pd.ExcelWriter(output, engine="openpyxl") as writer:
-            df.to_excel(writer, index=False, sheet_name="Alternativas Consolidadas")
-        processed_data = output.getvalue()
-        return processed_data
-
-    resultado_excel = convertir_a_excel(resultado_acumulado)
-    st.download_button(
-        label="Descargar archivo consolidado de alternativas",
-        data=resultado_excel,
-        file_name="alternativas_consolidadas.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    )
+        alternativas_excel = convertir_a_excel(alternativas)
+        st.download_button(
+            label="Descargar archivo de alternativas",
+            data=alternativas_excel,
+            file_name="alternativas_generadas.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
 else:
-    st.warning("No hay resultados para descargar. Por favor, procesa un archivo de faltantes.")
+    st.warning("Por favor, sube un archivo de faltantes para procesar.")
