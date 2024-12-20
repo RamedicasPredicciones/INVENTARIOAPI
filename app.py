@@ -146,7 +146,18 @@ if faltantes_file:
                 import io
                 output = io.BytesIO()
                 with pd.ExcelWriter(output, engine="openpyxl") as writer:
-                    df.to_excel(writer, index=False, sheet_name="Alternativas")
+                    # Filtrar las columnas deseadas
+                    columnas_deseadas = [
+                        "cur", "codart", "faltante", "embalaje", "codart_alternativa", 
+                        "nomart", "presentacionart", "embalaje_alternativa", "nomcomercial", 
+                        "descontart", "ffarmaceuticaart", "nomfabrart", "opcion_alternativa", 
+                        "numlote", "fechavencelote", "unidadeslote", 
+                        "existencias_codart_alternativa", "bodega", "cantidad_necesaria", 
+                        "estado_suplido"
+                    ]
+                    # Asegurarse de que solo las columnas disponibles sean seleccionadas
+                    df_filtrado = df[columnas_deseadas]
+                    df_filtrado.to_excel(writer, index=False, sheet_name="Alternativas")
                 return output.getvalue()
 
             alternativas_excel = convertir_a_excel(resultados_acumulados)
@@ -158,3 +169,4 @@ if faltantes_file:
             )
 else:
     st.warning("Por favor, sube un archivo de faltantes para procesar.")
+
