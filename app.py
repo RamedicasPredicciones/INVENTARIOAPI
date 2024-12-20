@@ -78,6 +78,11 @@ bodega_seleccionada = st.multiselect("Selecciona la bodega", options=bodegas_dis
 # Filtrar opciones disponibles
 if 'opcionart' in inventario.columns:
     inventario.rename(columns={'opcionart': 'opcion'}, inplace=True)
+
+# Convertir la columna "opcion" a numérica
+if 'opcion' in inventario.columns:
+    inventario['opcion'] = pd.to_numeric(inventario['opcion'], errors='coerce').fillna(0)
+
 opciones_disponibles = inventario[inventario['opcion'] >= 1]['opcion'].unique().tolist()
 opcion_seleccionada = st.multiselect("Selecciona la opcion", options=opciones_disponibles, default=[])
 
@@ -133,4 +138,3 @@ if faltantes_file:
             )
 else:
     st.warning("Por favor, sube un archivo de faltantes para procesar.")
-
